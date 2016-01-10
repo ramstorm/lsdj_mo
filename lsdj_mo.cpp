@@ -45,7 +45,7 @@ int main (int argc, char *argv[]) {
     if(incomingByte > 0x6f) {
       switch(incomingByte) {
         case 0x7F: //clock tick
-          cout << "*  clock tick" << endl;
+          //cout << "*  clock tick" << endl;
           //Serial.write(0xF8);
           break;
         case 0x7E: //seq stop
@@ -96,7 +96,7 @@ void midioutDoAction(int m, int v) {
   }
 
   // Temp debugging
-  cout << "[other] (m: " << m << ", v: " << v << ")" << endl;
+  //cout << "[other] (m: " << m << ", v: " << v << ")" << endl;
 }
 
 bool getIncomingSlaveByte() {
@@ -111,7 +111,7 @@ bool getIncomingSlaveByte() {
   usleep(BEFORE_READ_DELAY_US);
   bit = digitalRead(1);
   if (bit == 1) {
-    for(int i = 0; i < 8; i++) {
+    for(int i = 0; i < 7; i++) {
       digitalWrite(0, LOW);
       usleep(BIT_DELAY_US);
       digitalWrite(0, HIGH);
