@@ -17,28 +17,13 @@ bool chooseMidiPort( RtMidiOut *rtmidi );
 bool getIncomingSlaveByte();
 void midioutDoAction(int m, int v);
 void stopNote(int m);
+void stopAllNotes();
 
 int main(int argc, char *argv[]) {
   RtMidiOut *midiout = 0;
   std::vector<unsigned char> message;
   bool midiValueMode = false;
   unsigned int previousByte = 0;
-
-  // Setup MIDI out port
-  try {
-    midiout = new RtMidiOut();
-  }
-  catch (RtMidiError &error) {
-    error.printMessage();
-    exit(EXIT_FAILURE);
-  }
-  try {
-    if (chooseMidiPort(midiout) == false) goto cleanup;
-  }
-  catch (RtMidiError &error) {
-    error.printMessage();
-    goto cleanup;
-  }
 
   wiringPiSetup();
   pinMode (0, OUTPUT); // connect GPIO-0 to GB clock pin
@@ -60,11 +45,28 @@ int main(int argc, char *argv[]) {
        << "To use other delay settings:" << endl
        << "./lsdj_mo <byte_delay> <bit_delay> <before_read_delay>" << endl << endl;
 
+  // Setup MIDI out port
+  try {
+    midiout = new RtMidiOut();
+  }
+  catch (RtMidiError &error) {
+    error.printMessage();
+    exit(EXIT_FAILURE);
+  }
+  try {
+    if (chooseMidiPort(midiout) == false) goto cleanup;
+  }
+  catch (RtMidiError &error) {
+    error.printMessage();
+    goto cleanup;
+  }
+
   while(true) {
     if (!getIncomingSlaveByte()) {
       continue;
     }
     if(incomingByte > 0x6f) {
+      vector<unsigned char> message;
       switch(incomingByte) {
         case 0x7F: //clock tick
           //cout << "*  clock tick" << endl;
@@ -72,12 +74,14 @@ int main(int argc, char *argv[]) {
           break;
         case 0x7E: //seq stop
           cout << "*  seq stop" << endl;
-          //Serial.write(0xFC);
-          //stopAllNotes();
+          message.push_back(0xFC);
+          midiout->sendMessage(&message);
+          stopAllNotes();
           break;
         case 0x7D: //seq start
           cout << "*  seq start" << endl;
-          //Serial.write(0xFA);
+          message.push_back(0xFA);
+          midiout->sendMessage(&message);
           break;
         default:
           previousByte = (incomingByte - 0x70);
@@ -91,7 +95,6 @@ int main(int argc, char *argv[]) {
       midioutDoAction(previousByte, incomingByte);
     }
   }
-
 
   // Clean up
   cleanup:
@@ -126,9 +129,7 @@ void midioutDoAction(int m, int v) {
     lastNote[m] = v;
   }
   else if (m < 8) {
-    cout << "[CC] (m: " << m << ", v: " << v << ")" << endl;
-    //m -= 4;
-    //playCC(m,v);
+    cout << "[CC] (m: " << m << ", v: " << v << ", ccNo: " << ((v >> 4) & 0x07) << ")" << endl;
     message.push_back(0xB0 + m - 4);
     message.push_back(ccNumbers[(v >> 4) & 0x07]);
     message.push_back((v & 0x0F)*8);
@@ -136,8 +137,6 @@ void midioutDoAction(int m, int v) {
   }
   else if(m < 0x0C) {
     cout << "[PC] (m: " << m << ", v: " << v << ")" << endl;
-    //m -= 8;
-    //playPC(m,v);
     message.push_back(0xC0 + m - 8);
     message.push_back(v);
     midiout->sendMessage(&message);
@@ -154,6 +153,19 @@ void stopNote(int m) {
   message.push_back(lastNote[m]);
   message.push_back(100);
   midiout->sendMessage(&message);
+}
+
+void stopAllNotes() {
+  for (int m=0; m<4; m++) {
+    if (lastNote[m] > 0) {
+      stopNote(m);
+    }
+    vector<unsigned char> message;
+    message.push_back(0xB0 + m);
+    message.push_back(123);
+    message.push_back(0x7F);
+    midiout->sendMessage(&message);
+  }
 }
 
 bool getIncomingSlaveByte() {
