@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <wiringPi.h>
+#include <stdint.h>
 #include "RtMidi.h"
 
 using namespace std;
@@ -9,21 +10,19 @@ int BYTE_DELAY_US = 80;
 int BIT_DELAY_US = 2;
 int BEFORE_READ_DELAY_US = 0;
 RtMidiOut *midiout = 0;
-unsigned int incomingByte = 0;
-int ccNumbers[7] = {1,2,3,7,10,11,12};
-int lastNote[4] = {0,0,0,0};
+uint32_t incomingByte = 0;
+unsigned char ccNumbers[7] = {1,2,3,7,10,11,12};
+uint32_t lastNote[4] = {0,0,0,0};
 
 bool chooseMidiPort( RtMidiOut *rtmidi );
 bool getIncomingSlaveByte();
-void midioutDoAction(int m, int v);
-void stopNote(int m);
+void midioutDoAction(uint32_t m, uint32_t v);
+void stopNote(uint32_t m);
 void stopAllNotes();
 
 int main(int argc, char *argv[]) {
-  RtMidiOut *midiout = 0;
-  std::vector<unsigned char> message;
   bool midiValueMode = false;
-  unsigned int previousByte = 0;
+  uint32_t previousByte = 0;
 
   wiringPiSetup();
   pinMode (0, OUTPUT); // connect GPIO-0 to GB clock pin
@@ -66,7 +65,7 @@ int main(int argc, char *argv[]) {
       continue;
     }
     if(incomingByte > 0x6f) {
-      vector<unsigned char> message;
+      vector<unsigned char> message(3);
       switch(incomingByte) {
         case 0x7F: //clock tick
           //cout << "*  clock tick" << endl;
@@ -103,8 +102,8 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
-void midioutDoAction(int m, int v) {
-  vector<unsigned char> message;
+void midioutDoAction(uint32_t m, uint32_t v) {
+  vector<unsigned char> message(3);
 
   if(m < 4) {
     cout << "[note] (m: " << m << ", v: " << v << ")" << endl;
@@ -127,49 +126,56 @@ void midioutDoAction(int m, int v) {
     midiout->sendMessage(&message);
 
     lastNote[m] = v;
+    cout << "note end" << endl;
   }
   else if (m < 8) {
-    cout << "[CC] (m: " << m << ", v: " << v << ", ccNo: " << ((v >> 4) & 0x07) << ")" << endl;
+    cout << "[CC] (m: " << m << ", v: " << v << ")" << endl;
+    cout << "debugCC: " << ((v >> 4) & 0x07) << endl; 
     message.push_back(0xB0 + m - 4);
     message.push_back(ccNumbers[(v >> 4) & 0x07]);
     message.push_back((v & 0x0F)*8);
     midiout->sendMessage(&message);
+    cout << "cc end" << endl;
   }
   else if(m < 0x0C) {
     cout << "[PC] (m: " << m << ", v: " << v << ")" << endl;
     message.push_back(0xC0 + m - 8);
     message.push_back(v);
     midiout->sendMessage(&message);
+    cout << "pc end" << endl;
   }
 
   // Temp debugging
   //cout << "[other] (m: " << m << ", v: " << v << ")" << endl;
 }
 
-void stopNote(int m) {
+void stopNote(uint32_t m) {
   cout << "note off" << endl;
-  vector<unsigned char> message;
+  vector<unsigned char> message(3);
   message.push_back(0x80 + m);
   message.push_back(lastNote[m]);
   message.push_back(100);
   midiout->sendMessage(&message);
+  cout << "note off end" << endl;
 }
 
 void stopAllNotes() {
-  for (int m=0; m<4; m++) {
+  cout << "stopallnotes start" << endl;
+  for (uint32_t m=0; m<4; m++) {
     if (lastNote[m] > 0) {
       stopNote(m);
     }
-    vector<unsigned char> message;
+    vector<unsigned char> message(3);
     message.push_back(0xB0 + m);
     message.push_back(123);
     message.push_back(0x7F);
     midiout->sendMessage(&message);
   }
+  cout << "stopallnotes end" << endl;
 }
 
 bool getIncomingSlaveByte() {
-  unsigned int bit = 0;
+  uint32_t bit = 0;
   incomingByte = 0;
 
   delayMicroseconds(BYTE_DELAY_US);
@@ -207,7 +213,7 @@ bool chooseMidiPort( RtMidiOut *rtmidi )
   }
 
   std::string portName;
-  unsigned int i = 0, nPorts = rtmidi->getPortCount();
+  uint32_t i = 0, nPorts = rtmidi->getPortCount();
   if ( nPorts == 0 ) {
     std::cout << "No output ports available!" << std::endl;
     return false;
