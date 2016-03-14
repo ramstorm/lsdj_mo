@@ -132,7 +132,10 @@ void midioutDoAction(uint32_t m, uint32_t v) {
     //  stopNote(m);
     //}
 
-
+    if (v == 0) {
+      stopNote(m);
+      return;
+    }
     if (lastNote[m] > 0) {
       stopNote(m);
     }
