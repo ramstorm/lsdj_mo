@@ -134,6 +134,7 @@ void midioutDoAction(uint32_t m, uint32_t v) {
 
     if (v == 0) {
       stopNote(m);
+      lastNote[m] = 0;
       return;
     }
     if (lastNote[m] > 0) {
