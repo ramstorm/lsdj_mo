@@ -36,8 +36,8 @@ int main(int argc, char *argv[]) {
   m3.push_back(0);
 
   wiringPiSetup();
-  pinMode (0, OUTPUT); // connect GPIO-0 to GB clock pin
-  pinMode (1, INPUT);  // connect GPIO-1 to GB serial out
+  pinMode (2, OUTPUT); // connect GPIO-2 to GB clock pin
+  pinMode (0, INPUT);  // connect GPIO-0 to GB serial out
 
   if (argc == 4) {
     BYTE_DELAY_US = atoi(argv[1]);
@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
 
   cout << "LSDJ MIDI out handler for Raspberry Pi" << endl
        << "RPi - GB pin connections:" << endl
-       << "GPIO-0 - GB clock, GPIO-1 - GB serial out, RPi GND - GB GND" << endl << endl
+       << "GPIO-2 - GB clock, GPIO-0 - GB serial out, RPi GND - GB GND" << endl << endl
        << "Delay settings (microseconds):" << endl
        << "  byte delay: " << BYTE_DELAY_US << endl
        << "  bit delay: " << BIT_DELAY_US << endl
@@ -203,20 +203,20 @@ bool getIncomingSlaveByte() {
   incomingByte = 0;
 
   delayMicroseconds(BYTE_DELAY_US);
-  digitalWrite(0, LOW);
+  digitalWrite(2, LOW);
   delayMicroseconds(BYTE_DELAY_US);
-  digitalWrite(0,  HIGH);
+  digitalWrite(2,  HIGH);
 
   delayMicroseconds(BEFORE_READ_DELAY_US);
-  bit = digitalRead(1);
+  bit = digitalRead(0);
   if (bit == 1) {
     for(int i = 0; i < 7; i++) {
-      digitalWrite(0, LOW);
+      digitalWrite(2, LOW);
       delayMicroseconds(BIT_DELAY_US);
-      digitalWrite(0, HIGH);
+      digitalWrite(2, HIGH);
 
       delayMicroseconds(BEFORE_READ_DELAY_US);
-      bit = digitalRead(1);
+      bit = digitalRead(0);
 
       incomingByte = (incomingByte << 1) + bit;
     }
