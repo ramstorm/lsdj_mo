@@ -1,0 +1,24 @@
+LSDJ MIDI out handler for Raspberry Pi
+This program provides Arduinoboy-like functionality for LSDJ MIDI out mode.
+MIDI out is sent using a USB MIDI device connected to the Raspberry Pi. Device is selected when starting the program from command line.
+
+RPi - GB pin connections:
+GPIO-2 - GB clock, GPIO-0 - GB serial out, RPi GND - GB GND
+
+COMPILE
+For regular Raspbian:
+make
+
+For RT kernel:
+make rt
+
+RUN
+Use default delay values:
+sudo ./lsdj_mo
+
+Use custom delay values:
+sudo ./lsdj_mo <byte_delay> <bit_delay> <before_read_delay>
+
+STATUS:
+MIDI notes are often "missed". The Arduino seems more stable, or there are bugs in my code :(
+
